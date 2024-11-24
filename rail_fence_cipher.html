@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rail Fence Cipher Simulator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .cipher-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .visualization-box {
+            width: 100%;
+            max-width: 800px;
+            border: 2px solid #1976d2;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+            margin-top: 20px;
+            position: relative;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        .rail-system {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .rail-row {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .letter-box {
+            width: calc(100% / 15); /* Set the width to be dynamic based on the total available space */
+            max-width: 3em;
+            height: auto; /* Allow height to adjust dynamically to maintain aspect ratio */
+            aspect-ratio: 1 / 1; /* Maintain a square ratio */
+            border: 2px solid #90caf9;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: white;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            flex-shrink: 0; /* Prevent shrinking of letter boxes */
+        }
+
+        .letter-box.filled {
+            border-color: #1976d2;
+            color: #1976d2;
+        }
+
+        .letter-box.active {
+            background: #bbdefb;
+            border-color: #1976d2;
+            color: #1565c0;
+            transform: scale(1.1);
+        }
+
+        .alert {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .result-box {
+            background: #e3f2fd;
+            border: 2px solid #1976d2;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #1976d2;
+            text-align: center;
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .copy-button {
+            margin-top: 10px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Color definitions for different rows */
+        .rail-row-0 .filled, .result-box .rail-color-0 {
+            background: #e3f2fd;
+        }
+
+        .rail-row-1 .filled, .result-box .rail-color-1 {
+            background: #c8e6c9;
+        }
+
+        .rail-row-2 .filled, .result-box .rail-color-2 {
+            background: #ffecb3;
+        }
+
+        .rail-row-3 .filled, .result-box .rail-color-3 {
+            background: #ffe0b2;
+        }
+
+        .rail-row-4 .filled, .result-box .rail-color-4 {
+            background: #f8bbd0;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="mb-3">
+            <label for="themeSelect" class="form-label">Select Theme:</label>
+            <select class="form-select" id="themeSelect" onchange="switchTheme()">
+                <option value="primary">Default Theme</option>
+                <option value="dark">Dark Theme</option>
+                <option value="success">Green Theme</option>
+                <option value="warning">Yellow Theme</option>
+                <option value="danger">Red Theme</option>
+            </select>
+        </div>
+        <div class="cipher-container">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Rail Fence Cipher Simulator</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="text" class="form-label">Text Input (max 15 characters):</label>
+                        <input type="text" class="form-control" id="text" 
+                               placeholder="Enter text to encrypt/decrypt" 
+                               maxlength="15"
+                               onkeyup="validateInput()">
+                        <div class="alert alert-warning" id="textAlert">
+                            Maximum 15 characters allowed
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rails" class="form-label">Number of Rails (2-5):</label>
+                        <input type="number" class="form-control" id="rails" 
+                               min="2" max="5" value="3"
+                               onchange="validateRails()">
+                        <div class="alert alert-warning" id="railAlert">
+                            Number of rails must be between 2 and 5
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" id="encryptButton" onclick="encrypt()">Encrypt</button>
+                        <button class="btn btn-secondary" id="decryptButton" onclick="decrypt()">Decrypt</button>
+                        <button class="btn btn-warning" onclick="resetFields()">Reset</button>
+                    </div>
+
+                    <div class="visualization-box">
+                        <div class="rail-system" id="visualization"></div>
+                    </div>
+
+                    <div class="result-box" id="result">
+                        <span id="resultText"></span>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-outline-secondary copy-button" onclick="copyToClipboard()">
+                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAYUlEQVR4nGNgGE7Am4GB4QkDA8N/MjFB8JgCw/8TNp4EheQCulvgTWacgILakxgLKImTR8RYAOP7kIhxBvWoBT6jQeQzmor+0zqjoYOhb8Fjahd26MCTTEtAhnsQY8HQAABVctFxfxXV5QAAAABJRU5ErkJggg==" alt="copy">
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTheme() {
+            const theme = document.getElementById('themeSelect').value;
+            const cardHeader = document.querySelector('.card-header');
+            const encryptButton = document.getElementById('encryptButton');
+            const decryptButton = document.getElementById('decryptButton');
+            
+            if (cardHeader) {
+                cardHeader.className = `card-header bg-${theme} text-white`;
+            }
+            if (encryptButton) {
+                encryptButton.className = `btn btn-${theme}`;
+            }
+            if (decryptButton) {
+                decryptButton.className = `btn btn-${theme === 'dark' ? 'secondary' : theme}`;
+            }
+        }
+
+        function validateInput() {
+            const text = document.getElementById('text').value;
+            const textAlert = document.getElementById('textAlert');
+            if (text.length > 15) {
+                textAlert.style.display = 'block';
+                document.getElementById('text').value = text.substring(0, 15);
+            } else {
+                textAlert.style.display = 'none';
+            }
+        }
+
+        function validateRails() {
+            const rails = document.getElementById('rails').value;
+            const railAlert = document.getElementById('railAlert');
+            if (rails < 2 || rails > 5) {
+                railAlert.style.display = 'block';
+                document.getElementById('rails').value = Math.min(Math.max(rails, 2), 5);
+            } else {
+                railAlert.style.display = 'none';
+            }
+        }
+
+        function encrypt() {
+            const text = document.getElementById('text').value;
+            const rails = parseInt(document.getElementById('rails').value);
+            
+            if (!text || rails < 2 || rails > 5) {
+                alert('Please enter valid text and number of rails (2-5)');
+                return;
+            }
+
+            let fence = Array(rails).fill('').map(() => Array(text.length).fill(''));
+            let row = 0;
+            let goingDown = true;
+
+            for (let i = 0; i < text.length; i++) {
+                fence[row][i] = text[i];
+                
+                if (row === 0) goingDown = true;
+                if (row === rails - 1) goingDown = false;
+                
+                row += goingDown ? 1 : -1;
+            }
+
+            let result = '';
+            fence.forEach(rail => {
+                result += rail.filter(char => char !== '').join('');
+            });
+
+            document.getElementById('resultText').textContent = result;
+            visualizeFence(fence);
+            visualizeResult(fence);
+        }
+
+        function decrypt() {
+            const text = document.getElementById('text').value;
+            const rails = parseInt(document.getElementById('rails').value);
+            
+            if (!text || rails < 2 || rails > 5) {
+                alert('Please enter valid text and number of rails (2-5)');
+                return;
+            }
+
+            let fence = Array(rails).fill('').map(() => Array(text.length).fill(''));
+            let row = 0;
+            let goingDown = true;
+
+            for (let i = 0; i < text.length; i++) {
+                fence[row][i] = '*';
+                
+                if (row === 0) goingDown = true;
+                if (row === rails - 1) goingDown = false;
+                
+                row += goingDown ? 1 : -1;
+            }
+
+            let index = 0;
+            for (let i = 0; i < rails; i++) {
+                for (let j = 0; j < text.length; j++) {
+                    if (fence[i][j] === '*' && index < text.length) {
+                        fence[i][j] = text[index++];
+                    }
+                }
+            }
+
+            let result = '';
+            row = 0;
+            goingDown = true;
+            for (let i = 0; i < text.length; i++) {
+                result += fence[row][i];
+                
+                if (row === 0) goingDown = true;
+                if (row === rails - 1) goingDown = false;
+                
+                row += goingDown ? 1 : -1;
+            }
+
+            document.getElementById('resultText').textContent = result;
+            visualizeFence(fence);
+            visualizeResult(fence);
+        }
+
+        function copyToClipboard() {
+            const result = document.getElementById('resultText').textContent;
+            if (result) {
+                navigator.clipboard.writeText(result);
+                alert('Result copied to clipboard!');
+            } else {
+                alert('No result to copy.');
+            }
+        }
+
+        function visualizeFence(fence) {
+            const visualization = document.getElementById('visualization');
+            let html = '';
+            
+            for (let i = 0; i < fence.length; i++) {
+                html += `<div class="rail-row rail-row-${i}">`;
+                for (let j = 0; j < fence[i].length; j++) {
+                    html += `<div class="letter-box ${fence[i][j] !== '' ? 'filled' : ''}">${fence[i][j] || ''}</div>`;
+                }
+                html += '</div>';
+            }
+            
+            visualization.innerHTML = html;
+        }
+
+        function visualizeResult(fence) {
+            const resultBox = document.getElementById('result');
+            let html = '';
+
+            for (let i = 0; i < fence.length; i++) {
+                for (let j = 0; j < fence[i].length; j++) {
+                    if (fence[i][j] !== '') {
+                        html += `<div class="letter-box filled rail-color-${i}">${fence[i][j]}</div>`;
+                    }
+                }
+            }
+
+            resultBox.innerHTML = html + resultBox.innerHTML;
+        }
+    
+        function resetFields() {
+            document.getElementById('text').value = '';
+            document.getElementById('rails').value = 3;
+            document.getElementById('resultText').textContent = '';
+            document.getElementById('visualization').innerHTML = '';
+            document.getElementById('result').innerHTML = '<span id="resultText"></span>';
+        }
+
+    </script>
+</body>
+</html>
