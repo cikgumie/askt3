@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caesar Cipher</title>
+    <link id="themeStylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.2/slate/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #ffffff;
+        }
+        .cipher-wheel {
+            position: relative;
+            width: 80vmin;
+            height: 80vmin;
+            max-width: 400px;
+            max-height: 400px;
+            margin: 20px auto;
+            background: #1a1919;
+            border-radius: 50%;
+        }
+        .wheel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .outer-wheel {
+            width: 76vmin;
+            height: 76vmin;
+            max-width: 380px;
+            max-height: 380px;
+            z-index: 1;
+        }
+        .inner-wheel {
+            width: 64vmin;
+            height: 64vmin;
+            max-width: 320px;
+            max-height: 320px;
+            cursor: pointer;
+            z-index: 2;
+            background: #414141;
+            border-radius: 50%;
+        }
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4vmin;
+            height: 4vmin;
+            max-width: 20px;
+            max-height: 20px;
+            background: #ffb400;
+            border-radius: 50%;
+            z-index: 3;
+        }
+        .letter-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-origin: center center;
+        }
+        .letter {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 3vmin;
+            text-align: center;
+            width: 20px;
+        }
+        .outer-letter {
+            color: #ffb400;
+            top: calc(-2vmin + 5px);
+        }
+        .inner-letter {
+            color: #ffffff;
+            top: calc(-2vmin + 12px);
+        }
+        #rotationSlider {
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            background: #ffb400;
+            outline: none;
+            border-radius: 5px;
+        }
+        #rotationSlider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #ffb400;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        #rotationSlider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #ffb400;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-2">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark text-center">
+                <h2>Caesar Cipher</h2>
+                <div class="text-center mt-3">
+                    <label for="themeSelector" class="form-label">Pilih Tema:</label>
+                    <select id="themeSelector" class="form-select">
+                        <option value="slate">Slate</option>
+                        <option value="darkly">Darkly</option>
+                        <option value="solar">Solar</option>
+                        <option value="minty">Minty</option>
+                        <option value="cyborg">Cyborg</option>
+                        <option value="lumen">Lumen</option>
+                        <option value="superhero">Superhero</option>
+                        <option value="journal">Journal</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="cipher-wheel">
+                    <div class="wheel outer-wheel" id="outerWheel"></div>
+                    <div class="wheel inner-wheel" id="innerWheel"></div>
+                    <div class="wheel-center"></div>
+                </div>
+
+                <div class="text-center mb-4">
+                    <label for="rotationSlider" class="form-label">Anjakan: <span id="rotationValue">0</span></label>
+                    <input type="range" class="form-range" id="rotationSlider" min="0" max="25" value="0">
+                </div>
+
+                <div class="text-center mb-4">
+                    <button class="btn btn-primary btn-lg px-4" id="toggleButton" onclick="toggleEncryptDecrypt()">Sulitkan</button>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="inputText" class="form-label">Teks Masukan:</label>
+                        <textarea class="form-control" id="inputText" rows="3" placeholder="Masukkan teks untuk disulitkan"></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="outputText" class="form-label">Teks Keluaran:</label>
+                        <textarea class="form-control" id="outputText" rows="3" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const alphabet = Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        let currentRotation = 0;
+        let isEncryptMode = true;
+
+        function createWheel() {
+            const outerWheel = document.getElementById('outerWheel');
+            const innerWheel = document.getElementById('innerWheel');
+
+            alphabet.forEach((letter, index) => {
+                const container = document.createElement('div');
+                container.className = 'letter-container';
+                container.style.transform = `rotate(${index * 13.85}deg)`;
+                
+                const letterDiv = document.createElement('div');
+                letterDiv.className = 'letter outer-letter';
+                letterDiv.textContent = letter;
+                
+                container.appendChild(letterDiv);
+                outerWheel.appendChild(container);
+            });
+
+            alphabet.forEach((letter, index) => {
+                const container = document.createElement('div');
+                container.className = 'letter-container';
+                container.style.transform = `rotate(${index * 13.85}deg)`;
+                
+                const letterDiv = document.createElement('div');
+                letterDiv.className = 'letter inner-letter';
+                letterDiv.textContent = letter;
+                
+                container.appendChild(letterDiv);
+                innerWheel.appendChild(container);
+            });
+        }
+
+        function updateRotation(value) {
+            currentRotation = value;
+            const innerWheel = document.getElementById('innerWheel');
+            innerWheel.style.transform = `translate(-50%, -50%) rotate(${value * 13.85}deg)`;
+            innerWheel.style.transition = 'transform 0.5s ease';
+            document.getElementById('rotationValue').textContent = value;
+            autoProcessText();
+        }
+
+        function processText(text, encrypt = true) {
+            text = text.toUpperCase();
+            let result = '';
+            
+            for (let char of text) {
+                if (alphabet.includes(char)) {
+                    let index = alphabet.indexOf(char);
+                    let shift = encrypt ? currentRotation : -currentRotation;
+                    let newIndex = (index + shift + 26) % 26;
+                    result += alphabet[newIndex];
+                } else {
+                    result += char;
+                }
+            }
+            
+            return result;
+        }
+
+        function toggleEncryptDecrypt() {
+            isEncryptMode = !isEncryptMode;
+            const button = document.getElementById('toggleButton');
+            button.textContent = isEncryptMode ? 'Sulitkan' : 'Nyahsulit';
+            autoProcessText();
+        }
+
+        function autoProcessText() {
+            const input = document.getElementById('inputText').value;
+            if (input.trim() !== '') {
+                document.getElementById('outputText').value = processText(input, isEncryptMode);
+            } else {
+                document.getElementById('outputText').value = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createWheel();
+            
+            const slider = document.getElementById('rotationSlider');
+            const inputText = document.getElementById('inputText');
+            const themeSelector = document.getElementById('themeSelector');
+            const themeStylesheet = document.getElementById('themeStylesheet');
+            
+            slider.addEventListener('input', (e) => updateRotation(parseInt(e.target.value)));
+            inputText.addEventListener('input', autoProcessText);
+            
+            themeSelector.addEventListener('change', (e) => {
+                const selectedTheme = e.target.value;
+                themeStylesheet.href = `https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.2/${selectedTheme}/bootstrap.min.css`;
+            });
+        });
+    </script>
+</body>
+</html>
