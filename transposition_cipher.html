@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transposition Cipher Simulator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .content-wrap {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin: 10px auto;
+            position: relative;
+        }
+        .grid-row {
+            display: flex;
+            justify-content: center;
+            margin: 1px 0;
+            width: 100%;
+        }
+        .key-cell, .text-cell {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 1px;
+            aspect-ratio: 1;
+            font-weight: bold;
+            transition: all 0.4s ease-in-out;
+        }
+        .key-cell {
+            border: 2px solid #ff5722;
+            background-color: #ffccbc;
+            position: relative;
+        }
+        .text-cell {
+            border: 1px solid #ff9800;
+            background-color: #ffe0b2;
+            transform: scale(1);
+        }
+        .text-cell.animated {
+            transform: scale(1.1);
+        }
+        .output-cell {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 1px solid #ff9800;
+            margin: 0 1px;
+            transition: all 0.4s ease-in-out;
+            transform: translateY(0);
+        }
+        .output-cell.animated {
+            transform: translateY(-10px);
+        }
+        .key-number {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7em;
+            font-weight: bold;
+            color: #e65100;
+        }
+        .output-container {
+            width: 100%;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #fff9c4;
+            border: 2px solid #ffeb3b;
+        }
+        .output-grid {
+            display: flex;
+            justify-content: center;
+            flex-wrap: nowrap;
+            gap: 2px;
+            margin-top: 5px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .output-cell {
+            flex: 1;
+            min-width: 20px;
+        }
+        .mode-switch {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .btn-mode {
+            min-width: 120px;
+        }
+        .col-1 { background-color: #ff7043; }
+        .col-2 { background-color: #ff8a65; }
+        .col-3 { background-color: #ffab91; }
+        .col-4 { background-color: #d1c4e9; }
+        .col-5 { background-color: #ffe082; }
+        .col-6 { background-color: #ffb74d; }
+        .col-7 { background-color: #ff9800; }
+
+        .error-message {
+            color: #d32f2f;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="content-wrap">
+            <h1 class="text-center mb-4">Transposition Cipher Simulator</h1>
+
+            <div class="mode-switch">
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-mode active" onclick="switchMode('encrypt')" id="encryptBtn">Encrypt</button>
+                    <button class="btn btn-outline-primary btn-mode" onclick="switchMode('decrypt')" id="decryptBtn">Decrypt</button>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0" id="inputLabel">Input</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row gy-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="text" class="form-label" id="textLabel">Plain Text (max 20 chars)</label>
+                                <input type="text" class="form-control" id="text" maxlength="20" 
+                                       value="HELLO WORLD" onkeyup="updateCipher()">
+                                <div id="textError" class="error-message"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="key" class="form-label">Key Word (max 7 chars)</label>
+                                <input type="text" class="form-control" id="key" maxlength="7"
+                                       value="CIPHER" onkeyup="updateCipher()">
+                                <div id="keyError" class="error-message"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0" id="gridLabel">Encryption Grid</h5>
+                </div>
+                <div class="card-body">
+                    <div class="grid-container">
+                        <div id="grid"></div>
+                    </div>
+                    <div class="output-container">
+                        <h6 class="mb-2" id="outputLabel">Encrypted Text:</h6>
+                        <div id="output-grid" class="output-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'encrypt';
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('encryptBtn').classList.toggle('active', mode === 'encrypt');
+            document.getElementById('decryptBtn').classList.toggle('active', mode === 'decrypt');
+            document.getElementById('encryptBtn').classList.toggle('btn-outline-primary', mode !== 'encrypt');
+            document.getElementById('decryptBtn').classList.toggle('btn-outline-primary', mode !== 'decrypt');
+            document.getElementById('textLabel').textContent = mode === 'encrypt' ? 'Plain Text (max 20 chars)' : 'Cipher Text (max 20 chars)';
+            document.getElementById('gridLabel').textContent = mode === 'encrypt' ? 'Encryption Grid' : 'Decryption Grid';
+            document.getElementById('outputLabel').textContent = mode === 'encrypt' ? 'Encrypted Text:' : 'Decrypted Text:';
+            updateCipher();
+        }
+
+        function getKeyOrder(key) {
+            const keyArray = key.split('');
+            const sortedKey = [...keyArray].sort();
+            return keyArray.map(letter => sortedKey.indexOf(letter) + 1);
+        }
+
+        function validateInput() {
+            const text = document.getElementById('text').value.trim();
+            const key = document.getElementById('key').value.trim();
+            const textError = document.getElementById('textError');
+            const keyError = document.getElementById('keyError');
+            let isValid = true;
+
+            textError.textContent = '';
+            keyError.textContent = '';
+
+            if (text.length === 0) {
+                textError.textContent = 'Text is required';
+                isValid = false;
+            }
+
+            if (key.length === 0) {
+                keyError.textContent = 'Key is required';
+                isValid = false;
+            } else if (key.length > 7) {
+                keyError.textContent = 'Key must be 7 characters or less';
+                isValid = false;
+            }
+
+            const keyChars = key.split('');
+            if (new Set(keyChars).size !== keyChars.length) {
+                keyError.textContent = 'Key must not contain duplicate characters';
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        function calculateCellSizes(text, containerWidth) {
+            const minSize = 20;
+            const maxSize = 40;
+            const padding = 40;
+            const availableWidth = containerWidth - padding;
+            const cellSize = Math.floor(availableWidth / text.length);
+            return Math.min(Math.max(cellSize, minSize), maxSize);
+        }
+
+        function createGrid(text, key) {
+            const grid = document.getElementById('grid');
+            const outputGrid = document.getElementById('output-grid');
+            grid.innerHTML = '';
+            outputGrid.innerHTML = '';
+            
+            const keyOrder = getKeyOrder(key);
+            const cellSize = 40; // Fixed size for grid cells
+            
+            // Create key row
+            const keyRow = document.createElement('div');
+            keyRow.className = 'grid-row';
+            
+            for (let j = 0; j < key.length; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'key-cell';
+                cell.style.width = cell.style.height = `${cellSize}px`;
+                cell.style.fontSize = `${cellSize * 0.45}px`;
+                cell.textContent = key[j];
+                const keyNumber = document.createElement('div');
+                keyNumber.className = 'key-number';
+                keyNumber.textContent = keyOrder[j];
+                cell.appendChild(keyNumber);
+                keyRow.appendChild(cell);
+            }
+            grid.appendChild(keyRow);
+
+            if (currentMode === 'encrypt') {
+                createEncryptionGrid(text, key, keyOrder, cellSize);
+            } else {
+                createDecryptionGrid(text, key, keyOrder, cellSize);
+            }
+        }
+
+        function createEncryptionGrid(plaintext, key, keyOrder, gridCellSize) {
+            const grid = document.getElementById('grid');
+            const outputGrid = document.getElementById('output-grid');
+            const rows = Math.ceil(plaintext.length / key.length);
+            const totalCells = rows * key.length;
+
+            // Pad plaintext with 'X' to fill the grid completely
+            while (plaintext.length < totalCells) {
+                plaintext += 'X';
+            }
+
+            const gridArray = Array(rows).fill().map(() => Array(key.length).fill(''));
+            
+            // Fill grid array
+            for (let i = 0; i < plaintext.length; i++) {
+                const row = Math.floor(i / key.length);
+                const col = i % key.length;
+                gridArray[row][col] = plaintext[i];
+            }
+
+            // Display grid
+            for (let i = 0; i < rows; i++) {
+                const row = document.createElement('div');
+                row.className = 'grid-row';
+                for (let j = 0; j < key.length; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = `text-cell col-${keyOrder[j]}`;
+                    cell.style.width = cell.style.height = `${gridCellSize}px`;
+                    cell.style.fontSize = `${gridCellSize * 0.45}px`;
+                    cell.textContent = gridArray[i][j];
+                    row.appendChild(cell);
+                }
+                grid.appendChild(row);
+            }
+
+            // Generate output
+            const readOrder = keyOrder
+                .map((num, idx) => ({num, idx}))
+                .sort((a, b) => a.num - b.num)
+                .map(item => item.idx);
+
+            let outputText = '';
+            let outputCells = [];
+            for (const col of readOrder) {
+                for (let row = 0; row < rows; row++) {
+                    if (gridArray[row][col]) {
+                        outputText += gridArray[row][col];
+                        outputCells.push({ text: gridArray[row][col], className: `col-${keyOrder[col]}` });
+                    }
+                }
+            }
+
+            // Calculate output cell size
+            const outputContainer = document.querySelector('.output-container');
+            const outputCellSize = calculateCellSizes(outputText, outputContainer.offsetWidth);
+
+            // Ensure Encrypted Text fits in one row
+            outputGrid.style.flexWrap = 'nowrap';
+
+            // Display output
+            for (let i = 0; i < outputCells.length; i++) {
+                const cell = document.createElement('div');
+                cell.className = `output-cell ${outputCells[i].className}`;
+                cell.style.width = `${100 / outputCells.length}%`;
+                cell.style.height = 'auto';
+                cell.style.fontSize = `calc(${outputCellSize}px * 0.45)`;
+                cell.textContent = outputCells[i].text;
+                cell.classList.add('animated');
+                setTimeout(() => cell.classList.remove('animated'), 500);
+                outputGrid.appendChild(cell);
+            }
+        }
+
+        function createDecryptionGrid(ciphertext, key, keyOrder, gridCellSize) {
+            const grid = document.getElementById('grid');
+            const outputGrid = document.getElementById('output-grid');
+            const rows = Math.ceil(ciphertext.length / key.length);
+            const gridArray = Array(rows).fill().map(() => Array(key.length).fill(''));
+            
+            const readOrder = keyOrder
+                .map((num, idx) => ({num, idx}))
+                .sort((a, b) => a.num - b.num)
+                .map(item => item.idx);
+
+            let textIndex = 0;
+            for (let i = 0; i < key.length; i++) {
+                const col = readOrder[i];
+                for (let row = 0; row < rows && textIndex < ciphertext.length; row++) {
+                    gridArray[row][col] = ciphertext[textIndex++];
+                }
+            }
+
+            // Display grid
+            for (let i = 0; i < rows; i++) {
+                const row = document.createElement('div');
+                row.className = 'grid-row';
+                for (let j = 0; j < key.length; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = `text-cell col-${keyOrder[j]}`;
+                    cell.style.width = cell.style.height = `${gridCellSize}px`;
+                    cell.style.fontSize = `${gridCellSize * 0.45}px`;
+                    cell.textContent = gridArray[i][j];
+                    cell.classList.add('animated');
+                    setTimeout(() => cell.classList.remove('animated'), 500);
+                    row.appendChild(cell);
+                }
+                grid.appendChild(row);
+            }
+
+            // Generate plaintext
+            let outputText = '';
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < key.length; j++) {
+                    if (gridArray[i][j]) {
+                        outputText += gridArray[i][j];
+                    }
+                }
+            }
+
+            // Calculate output cell size
+            const outputContainer = document.querySelector('.output-container');
+            const outputCellSize = calculateCellSizes(outputText, outputContainer.offsetWidth);
+
+            // Display output
+            for (let i = 0; i < outputText.length; i++) {
+                const cell = document.createElement('div');
+                cell.className = `output-cell col-${keyOrder[i % keyOrder.length]}`;
+                cell.style.width = `${100 / outputText.length}%`;
+                cell.style.height = 'auto';
+                cell.style.fontSize = `calc(${outputCellSize}px * 0.45)`;
+                cell.textContent = outputText[i];
+                cell.classList.add('animated');
+                setTimeout(() => cell.classList.remove('animated'), 500);
+                outputGrid.appendChild(cell);
+            }
+        }
+
+        function updateCipher() {
+            let text = document.getElementById('text').value.replace(/\s/g, '').toUpperCase();
+            let key = document.getElementById('key').value.replace(/\s/g, '').toUpperCase();
+            
+            if (validateInput() && text && key) {
+                createGrid(text, key);
+            }
+        }
+
+        // Listen for window resize
+        window.addEventListener('resize', updateCipher);
+
+        // Initial setup
+        updateCipher();
+    </script>
+</body>
+</html>
