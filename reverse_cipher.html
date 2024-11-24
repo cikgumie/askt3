@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Cipher</title>
+    <link id="themeStylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.2/slate/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #ffffff;
+        }
+        .letter-box {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #007bff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 1px;
+            font-size: 0.7em;
+            font-weight: bold;
+            background: #000000;
+            color: #ffffff;
+        }
+        .box-container {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            gap: 1px;
+            overflow-x: auto;
+            padding: 5px;
+            min-height: 35px;
+        }
+        .cipher-box {
+            background: #000000;
+            color: #ffffff;
+        }
+        .arrow {
+            font-size: 20px;
+            color: #6c757d;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-2">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark text-center">
+                <h2>Reverse Cipher</h2>
+                <div class="text-center mt-3">
+                    <label for="themeSelector" class="form-label">Pilih Tema:</label>
+                    <select id="themeSelector" class="form-select">
+                        <option value="slate">Slate</option>
+                        <option value="darkly">Darkly</option>
+                        <option value="solar">Solar</option>
+                        <option value="minty">Minty</option>
+                        <option value="cyborg">Cyborg</option>
+                        <option value="lumen">Lumen</option>
+                        <option value="superhero">Superhero</option>
+                        <option value="journal">Journal</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="btn-group" role="group" id="cipherType">
+                        <button type="button" class="btn btn-primary active" data-type="reverse-word">Songsang Perkataan</button>
+                        <button type="button" class="btn btn-outline-primary" data-type="reverse-sentence">Songsang Ayat</button>
+                    </div>
+                </div>
+
+                <div id="reverseCipherSection">
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="inputText" maxlength="20" placeholder=" ">
+                        <label for="inputText">Masukkan teks (maksimum 20 aksara)</label>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="card mb-2">
+                            <div class="card-header bg-light py-1">
+                                <small>Teks Asal:</small>
+                            </div>
+                            <div class="card-body py-1">
+                                <div id="inputBoxes" class="box-container"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="arrow">↓</div>
+                        
+                        <div class="card">
+                            <div class="card-header bg-light py-1">
+                                <small>Hasil Songsang:</small>
+                            </div>
+                            <div class="card-body py-1">
+                                <div id="outputBoxes" class="box-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentType = 'reverse-word';
+
+        function updateBoxes() {
+            const input = document.getElementById('inputText').value.toUpperCase();
+            const inputBoxes = document.getElementById('inputBoxes');
+            const outputBoxes = document.getElementById('outputBoxes');
+            
+            let output = currentType === 'reverse-word' 
+                ? input.split(' ').map(word => word.split('').reverse().join('')).join(' ')
+                : input.split('').reverse().join('');
+            
+            inputBoxes.innerHTML = input.split('').map(char => 
+                `<div class="letter-box">${char}</div>`
+            ).join('');
+            
+            outputBoxes.innerHTML = output.split('').map(char => 
+                `<div class="letter-box cipher-box">${char}</div>`
+            ).join('');
+        }
+
+        document.querySelectorAll('#cipherType button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelector('#cipherType button.active').classList.replace('btn-primary', 'btn-outline-primary');
+                document.querySelector('#cipherType button.active').classList.remove('active');
+                e.target.classList.replace('btn-outline-primary', 'btn-primary');
+                e.target.classList.add('active');
+                currentType = e.target.getAttribute('data-type');
+                updateBoxes();
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputText = document.getElementById('inputText');
+            const themeSelector = document.getElementById('themeSelector');
+            const themeStylesheet = document.getElementById('themeStylesheet');
+            
+            inputText.addEventListener('input', updateBoxes);
+            
+            themeSelector.addEventListener('change', (e) => {
+                const selectedTheme = e.target.value;
+                themeStylesheet.href = `https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.2/${selectedTheme}/bootstrap.min.css`;
+            });
+        });
+    </script>
+</body>
+</html>
